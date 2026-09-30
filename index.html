@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>MedPlus OJT Training App</title>
+
+<!-- Firebase v9 compat -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<style>
+:root{
+  --blue:#004080;--blue2:#0060c0;--green:#0b6e2e;--red:#c0392b;
+  --orange:#e65c00;--white:#fff;--grey:#f4f6fa;--border:#dde3ee;
+  --text:#1a1a2e;--muted:#6b7280;--success:#16a34a;--warn:#d97706;
+  --radius:14px;--shadow:0 2px 16px rgba(0,0,0,.1);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background:var(--grey);color:var(--text);min-height:100vh;
+  max-width:440px;margin:0 auto;}
+
+/* ── SCREENS ── */
+.screen{display:none;min-height:100vh;}
+.screen.active{display:block;animation:fadeIn .2s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ── TOPBAR ── */
+.topbar{background:var(--blue);color:#fff;padding:14px 16px 12px;
+  display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;
+  box-shadow:0 2px 8px rgba(0,0,0,.2);}
+.logo{width:34px;height:34px;background:#fff;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:13px;color:var(--blue);flex-shrink:0;}
+.topbar-title{font-size:15px;font-weight:700;}
+.topbar-sub{font-size:11px;opacity:.75;}
+.spacer{flex:1;}
+.topbar-btn{background:rgba(255,255,255,.2);border:none;color:#fff;
+  border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;}
+
+/* ── CONTENT ── */
+.content{padding:16px;padding-bottom:90px;}
+
+/* ── CARDS ── */
+.card{background:#fff;border-radius:var(--radius);padding:16px;
+  box-shadow:var(--shadow);margin-bottom:12px;}
+.card-title{font-size:13px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;}
+
+/* ── LOGIN ── */
+.login-hero{background:linear-gradient(135deg,var(--blue),var(--blue2));
+  padding:40px 24px 32px;text-align:center;color:#fff;}
+.login-hero .m-logo{width:64px;height:64px;background:#fff;border-radius:16px;
+  display:flex;align-items:center;justify-content:center;margin:0 auto 14px;
+  font-weight:900;font-size:22px;color:var(--blue);}
+.login-hero h1{font-size:20px;margin-bottom:6px;}
+.login-hero p{font-size:13px;opacity:.85;}
+.login-box{padding:20px 16px;}
+.field-label{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px;display:block;}
+.field-input{width:100%;padding:12px 14px;border:2px solid var(--border);
+  border-radius:10px;font-size:15px;color:var(--text);background:#fff;
+  outline:none;transition:border .15s;margin-bottom:14px;}
+.field-input:focus{border-color:var(--blue);}
+.role-pill{display:inline-block;padding:3px 12px;border-radius:20px;
+  font-size:11px;font-weight:700;}
+.role-admin{background:#dbeafe;color:#1d4ed8;}
+.role-mentor{background:#d1fae5;color:#065f46;}
+.role-trainee{background:#fef3c7;color:#92400e;}
+
+/* ── BUTTONS ── */
+.btn{display:block;width:100%;padding:14px;border:none;border-radius:12px;
+  font-size:15px;font-weight:700;cursor:pointer;text-align:center;
+  transition:opacity .15s,transform .1s;}
+.btn:active{opacity:.85;transform:scale(.98);}
+.btn-primary{background:var(--blue);color:#fff;}
+.btn-success{background:var(--success);color:#fff;}
+.btn-danger{background:var(--red);color:#fff;}
+.btn-outline{background:transparent;color:var(--blue);border:2px solid var(--blue);}
+.btn-sm{padding:7px 14px;font-size:13px;border-radius:8px;width:auto;display:inline-block;}
+.btn-row{display:flex;gap:10px;margin-top:12px;}
+.btn-row .btn{flex:1;}
+
+/* ── TABS ── */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:440px;background:#fff;border-top:1px solid var(--border);
+  display:flex;z-index:99;}
+.nav-item{flex:1;padding:10px 4px 8px;text-align:center;cursor:pointer;
+  border:none;background:none;color:var(--muted);font-size:10px;
+  display:flex;flex-direction:column;align-items:center;gap:3px;transition:color .15s;}
+.nav-item .ni{font-size:20px;}
+.nav-item.active{color:var(--blue);}
+
+/* ── STAT ROW ── */
+.stat-row{display:flex;gap:10px;margin-bottom:12px;}
+.stat-box{flex:1;background:#fff;border-radius:10px;padding:12px;
+  text-align:center;box-shadow:var(--shadow);}
+.stat-num{font-size:22px;font-weight:800;color:var(--blue);}
+.stat-lbl{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* ── TRAINEE CARD ── */
+.trainee-item{display:flex;align-items:center;gap:12px;padding:12px 0;
+  border-bottom:1px solid var(--border);cursor:pointer;}
+.trainee-item:last-child{border-bottom:none;}
+.t-avatar{width:40px;height:40px;border-radius:50%;display:flex;
+  align-items:center;justify-content:center;font-weight:800;font-size:15px;
+  flex-shrink:0;color:#fff;}
+.t-info{flex:1;}
+.t-name{font-size:14px;font-weight:700;}
+.t-meta{font-size:12px;color:var(--muted);}
+.t-chevron{font-size:18px;color:var(--muted);}
+
+/* ── PROGRESS ── */
+.prog-bar{height:6px;background:#e5e7eb;border-radius:10px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:10px;background:var(--success);transition:width .4s;}
+
+/* ── ACTIVITY CARD ── */
+.act-card{background:#fff;border-radius:var(--radius);padding:14px 16px;
+  margin-bottom:10px;box-shadow:var(--shadow);display:flex;align-items:center;
+  gap:12px;cursor:pointer;border:2px solid transparent;transition:border .15s;}
+.act-card.done{border-color:var(--success);}
+.act-card.partial{border-color:var(--warn);}
+.act-icon{width:42px;height:42px;border-radius:10px;display:flex;
+  align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.act-info{flex:1;}
+.act-name{font-size:14px;font-weight:700;margin-bottom:3px;}
+.act-meta{font-size:12px;color:var(--muted);}
+
+/* ── QUIZ ── */
+.q-header{background:#fff;border-radius:var(--radius);padding:14px;margin-bottom:12px;box-shadow:var(--shadow);}
+.proc-tag{font-size:11px;font-weight:700;color:var(--blue);background:#dbeafe;
+  border-radius:20px;padding:3px 10px;display:inline-block;margin-bottom:6px;}
+.step-dots{display:flex;gap:5px;margin-top:10px;}
+.dot{flex:1;height:4px;border-radius:4px;background:#e5e7eb;}
+.dot.done{background:var(--success);}
+.dot.active{background:var(--blue);}
+.q-card{background:#fff;border-radius:var(--radius);padding:18px 16px;
+  margin-bottom:12px;box-shadow:var(--shadow);}
+.q-num{font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;
+  letter-spacing:.5px;margin-bottom:8px;}
+.q-text{font-size:15px;font-weight:600;line-height:1.5;margin-bottom:14px;}
+.input-tag{font-size:11px;color:var(--muted);background:var(--grey);
+  border-radius:20px;padding:3px 10px;display:inline-block;margin-bottom:12px;}
+.q-input{width:100%;padding:12px 14px;border:2px solid var(--border);
+  border-radius:10px;font-size:14px;outline:none;transition:border .15s;}
+.q-input:focus{border-color:var(--blue);}
+.q-input.filled{border-color:var(--success);background:#f0fdf4;}
+select.q-input{appearance:none;cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:36px;}
+.hint-box{background:#eff6ff;border-radius:8px;padding:10px 12px;
+  margin-top:10px;font-size:12px;color:var(--blue);line-height:1.4;}
+.feedback{border-radius:8px;padding:10px 12px;margin-top:10px;
+  font-size:13px;display:none;}
+.feedback.correct{background:#f0fdf4;color:var(--success);border:1.5px solid #bbf7d0;}
+.feedback.info{background:#eff6ff;color:var(--blue);border:1.5px solid #bfdbfe;}
+.feedback.show{display:block;animation:fadeIn .2s;}
+
+/* ── SCORE CARD ── */
+.score-card{background:linear-gradient(135deg,var(--blue),var(--blue2));
+  border-radius:var(--radius);padding:20px;color:#fff;margin-bottom:12px;text-align:center;}
+.score-big{font-size:48px;font-weight:900;line-height:1;}
+.score-sub{font-size:13px;opacity:.85;margin-top:4px;}
+.score-comment{background:rgba(255,255,255,.15);border-radius:8px;
+  padding:10px 12px;margin-top:12px;font-size:13px;text-align:left;}
+
+/* ── FORM SECTION ── */
+.form-section{background:#fff;border-radius:var(--radius);padding:16px;
+  box-shadow:var(--shadow);margin-bottom:12px;}
+.form-title{font-size:14px;font-weight:800;margin-bottom:14px;color:var(--blue);}
+.input-row{display:flex;gap:10px;}
+.input-row .field-group{flex:1;}
+.field-group{margin-bottom:12px;}
+
+/* ── TABLE ── */
+.data-table{width:100%;border-collapse:collapse;font-size:13px;}
+.data-table th{background:var(--blue);color:#fff;padding:8px 10px;
+  text-align:left;font-size:12px;}
+.data-table td{padding:8px 10px;border-bottom:1px solid var(--border);}
+.data-table tr:last-child td{border-bottom:none;}
+.data-table tr:nth-child(even) td{background:#f8faff;}
+
+/* ── ALERTS ── */
+.alert{border-radius:10px;padding:12px 14px;font-size:13px;margin-bottom:12px;}
+.alert-danger{background:#fff1f2;color:var(--red);border:1.5px solid #fecdd3;}
+.alert-success{background:#f0fdf4;color:var(--success);border:1.5px solid #bbf7d0;}
+.alert-info{background:#eff6ff;color:var(--blue);border:1.5px solid #bfdbfe;}
+
+/* ── DENOM ── */
+.denom-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.denom-lbl{font-size:12px;color:var(--muted);margin-bottom:3px;font-weight:600;}
+
+/* ── MISC ── */
+.divider{height:1px;background:var(--border);margin:12px 0;}
+.tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;}
+.tag-done{background:#dcfce7;color:var(--success);}
+.tag-pending{background:#fef3c7;color:var(--warn);}
+.tag-new{background:#dbeafe;color:var(--blue);}
+.empty{text-align:center;padding:40px 20px;color:var(--muted);}
+.empty .ei{font-size:40px;margin-bottom:10px;}
+.loading{text-align:center;padding:30px;color:var(--muted);font-size:14px;}
+.back-btn{display:flex;align-items:center;gap:5px;background:none;border:none;
+  cursor:pointer;color:var(--blue);font-size:14px;font-weight:600;
+  padding:0;margin-bottom:14px;}
+.photo-upload{border:2px dashed var(--border);border-radius:10px;padding:20px;
+  text-align:center;cursor:pointer;}
+.photo-upload.uploaded{border-color:var(--success);background:#f0fdf4;}
+
+/* ── EVALUATION SCORE INPUT ── */
+.score-input-wrap{display:flex;align-items:center;gap:10px;margin:10px 0;}
+.score-slider{flex:1;accent-color:var(--blue);}
+.score-val{font-size:24px;font-weight:900;color:var(--blue);min-width:45px;text-align:center;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+  background:#1a1a2e;color:#fff;border-radius:12px;padding:10px 20px;
+  font-size:13px;font-weight:600;z-index:999;opacity:0;
+  transition:opacity .3s;white-space:nowrap;}
+.toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     LOGIN SCREEN
+══════════════════════════════════════════ -->
+<div class="screen active" id="screen-login">
+  <div class="login-hero">
+    <div class="m-logo">M+</div>
+    <h1>MedPlus OJT</h1>
+    <p>Training Assessment Platform</p>
+  </div>
+  <div class="login-box">
+    <div id="loginAlert"></div>
+    <div class="field-group">
+      <label class="field-label">Email Address</label>
+      <input class="field-input" id="loginEmail" type="email" placeholder="your@email.com"/>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Password</label>
+      <input class="field-input" id="loginPassword" type="password" placeholder="Enter password"/>
+    </div>
+    <button class="btn btn-primary" onclick="doLogin()">Sign In →</button>
+    <p style="text-align:center;margin-top:14px;font-size:12px;color:var(--muted);">
+      Contact your Admin if you don't have an account.
+    </p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     ADMIN SCREEN
+══════════════════════════════════════════ -->
+<div class="screen" id="screen-admin">
+  <div class="topbar">
+    <div class="logo">M+</div>
+    <div><div class="topbar-title">Admin Panel</div><div class="topbar-sub" id="adminName"></div></div>
+    <div class="spacer"></div>
+    <button class="topbar-btn" onclick="doLogout()">Logout</button>
+  </div>
+
+  <!-- Admin Tab: Users -->
+  <div class="content" id="adminTab-users" style="display:block">
+    <div class="stat-row">
+      <div class="stat-box"><div class="stat-num" id="aStatTrainees">—</div><div class="stat-lbl">Trainees</div></div>
+      <div class="stat-box"><div class="stat-num" id="aStatMentors">—</div><div class="stat-lbl">Mentors</div></div>
+      <div class="stat-box"><div class="stat-num" id="aStatDone">—</div><div class="stat-lbl">Completed</div></div>
+    </div>
+
+    <!-- Create User Form -->
+    <div class="form-section">
+      <div class="form-title">➕ Create New User</div>
+      <div id="createAlert"></div>
+      <div class="field-group">
+        <label class="field-label">Full Name</label>
+        <input class="field-input" id="newName" placeholder="e.g. Priya Sharma" style="margin-bottom:0"/>
+      </div>
+      <div class="field-group" style="margin-top:10px">
+        <label class="field-label">Email Address</label>
+        <input class="field-input" id="newEmail" type="email" placeholder="priya@medplus.com" style="margin-bottom:0"/>
+      </div>
+      <div class="input-row" style="margin-top:10px">
+        <div class="field-group" style="margin-bottom:0">
+          <label class="field-label">Password</label>
+          <input class="field-input" id="newPassword" type="password" placeholder="Min 6 chars" style="margin-bottom:0"/>
+        </div>
+        <div class="field-group" style="margin-bottom:0">
+          <label class="field-label">Role</label>
+          <select class="field-input q-input" id="newRole" style="margin-bottom:0" onchange="toggleMentorAssign()">
+            <option value="trainee">Trainee</option>
+            <option value="mentor">Mentor</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-group" id="mentorAssignWrap" style="margin-top:10px">
+        <label class="field-label">Assign Mentor (for Trainee)</label>
+        <select class="field-input q-input" id="assignMentor" style="margin-bottom:0">
+          <option value="">— Select Mentor —</option>
+        </select>
+      </div>
+      <div class="field-group" style="margin-top:10px">
+        <label class="field-label">Store / Location</label>
+        <input class="field-input" id="newStore" placeholder="e.g. Hyderabad - Kukatpally" style="margin-bottom:0"/>
+      </div>
+      <button class="btn btn-primary" style="margin-top:14px" onclick="createUser()">Create User</button>
+    </div>
+
+    <!-- Users List -->
+    <div class="card">
+      <div class="card-title">All Users</div>
+      <div id="usersList"><div class="loading">Loading users...</div></div>
+    </div>
+  </div>
+
+  <!-- Admin Tab: Progress -->
+  <div class="content" id="adminTab-progress" style="display:none">
+    <div class="card">
+      <div class="card-title">All Trainees Progress</div>
+      <div id="adminProgressList"><div class="loading">Loading...</div></div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-item active" id="anav-users" onclick="switchAdminTab('users')">
+      <span class="ni">👥</span>Users
+    </button>
+    <button class="nav-item" id="anav-progress" onclick="switchAdminTab('progress')">
+      <span class="ni">📊</span>Progress
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MENTOR SCREEN
+══════════════════════════════════════════ -->
+<div class="screen" id="screen-mentor">
+  <div class="topbar">
+    <div class="logo">M+</div>
+    <div><div class="topbar-title">Mentor Dashboard</div><div class="topbar-sub" id="mentorName"></div></div>
+    <div class="spacer"></div>
+    <button class="topbar-btn" onclick="doLogout()">Logout</button>
+  </div>
+
+  <!-- Mentor: Trainee List -->
+  <div class="content" id="mentorTab-trainees" style="display:block">
+    <div class="stat-row">
+      <div class="stat-box"><div class="stat-num" id="mStatTrainees">—</div><div class="stat-lbl">My Trainees</div></div>
+      <div class="stat-box"><div class="stat-num" id="mStatScored">—</div><div class="stat-lbl">Scored</div></div>
+      <div class="stat-box"><div class="stat-num" id="mStatPending">—</div><div class="stat-lbl">Pending</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">My Trainees</div>
+      <div id="mentorTraineeList"><div class="loading">Loading...</div></div>
+    </div>
+  </div>
+
+  <!-- Mentor: Trainee Detail -->
+  <div class="content" id="mentorTab-detail" style="display:none">
+    <button class="back-btn" onclick="switchMentorTab('trainees')">← Back to Trainees</button>
+    <div class="card" id="mentorDetailHeader"></div>
+    <div id="mentorDetailActivities"></div>
+
+    <!-- Evaluation Score -->
+    <div class="form-section" id="evalSection">
+      <div class="form-title">🏆 Final Evaluation Score</div>
+      <div class="score-input-wrap">
+        <input type="range" min="0" max="100" value="0" class="score-slider" id="evalSlider"
+          oninput="document.getElementById('evalScoreVal').textContent=this.value">
+        <div class="score-val" id="evalScoreVal">0</div>
+        <span style="font-size:13px;color:var(--muted)">/100</span>
+      </div>
+      <div class="field-group" style="margin-top:10px">
+        <label class="field-label">Comments / Feedback</label>
+        <textarea class="field-input" id="evalComment" rows="3"
+          placeholder="e.g. Good understanding of stock receiving. Needs improvement in cash handling."></textarea>
+      </div>
+      <button class="btn btn-success" onclick="submitEvaluation()">Submit Evaluation</button>
+      <div id="evalAlert" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-item active" id="mnav-trainees" onclick="switchMentorTab('trainees')">
+      <span class="ni">👥</span>Trainees
+    </button>
+    <button class="nav-item" id="mnav-detail" onclick="switchMentorTab('detail')" style="display:none">
+      <span class="ni">📋</span>Detail
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     TRAINEE SCREEN
+══════════════════════════════════════════ -->
+<div class="screen" id="screen-trainee">
+  <div class="topbar">
+    <div class="logo">M+</div>
+    <div><div class="topbar-title">My Training</div><div class="topbar-sub" id="traineeName"></div></div>
+    <div class="spacer"></div>
+    <button class="topbar-btn" onclick="doLogout()">Logout</button>
+  </div>
+
+  <!-- Trainee Tab: Home -->
+  <div class="content" id="traineeTab-home" style="display:block">
+    <!-- Mentor Score Banner (shown if evaluated) -->
+    <div id="mentorScoreBanner" style="display:none"></div>
+
+    <div class="stat-row">
+      <div class="stat-box"><div class="stat-num" id="tStatDone">0</div><div class="stat-lbl">Answered</div></div>
+      <div class="stat-box"><div class="stat-num" id="tStatTotal">42</div><div class="stat-lbl">Total Qs</div></div>
+      <div class="stat-box"><div class="stat-num" id="tStatPct" style="color:var(--orange)">0%</div><div class="stat-lbl">Progress</div></div>
+    </div>
+
+    <div class="prog-bar" style="margin-bottom:16px;height:8px;">
+      <div class="prog-fill" id="tOverallBar" style="width:0%"></div>
+    </div>
+
+    <div class="card-title">Activities</div>
+    <div id="traineeActivityList"></div>
+  </div>
+
+  <!-- Trainee Tab: Quiz -->
+  <div class="content" id="traineeTab-quiz" style="display:none">
+    <button class="back-btn" onclick="switchTraineeTab('home')">← Back</button>
+    <div class="q-header" id="quizHeader"></div>
+    <div id="quizArea"></div>
+    <div class="btn-row" id="quizBtns">
+      <button class="btn btn-outline" id="btnSkip" onclick="skipQ()">Skip</button>
+      <button class="btn btn-primary" id="btnSubmit" onclick="submitQ()">Submit →</button>
+    </div>
+  </div>
+
+  <!-- Trainee Tab: My Score -->
+  <div class="content" id="traineeTab-score" style="display:none">
+    <div id="myScoreContent"><div class="loading">Loading...</div></div>
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-item active" id="tnav-home" onclick="switchTraineeTab('home')">
+      <span class="ni">🏠</span>Home
+    </button>
+    <button class="nav-item" id="tnav-score" onclick="switchTraineeTab('score')">
+      <span class="ni">🏆</span>My Score
+    </button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════ -->
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// FIREBASE CONFIG — Replace with YOUR Firebase project config
+// ─────────────────────────────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey:            "AIzaSyA3WF6rUIDk5Y438qi_Wlel3aWwx_2HDNo",
+  authDomain:        "ojt-que.firebaseapp.com",
+  projectId:         "ojt-que",
+  storageBucket:     "ojt-que.firebasestorage.app",
+  messagingSenderId: "867408114796",
+  appId:             "1:867408114796:web:a6098d2651529073d11449"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// QUESTIONS DATA
+// ─────────────────────────────────────────────────────────────────────────────
+const SECTIONS=[{process:"Stock Receiving",activity:"Shipment Receiving",icon:"📦",bg:"#dbeafe",questions:[{qno:"Q1",question:"Enter the DC (Delivery Challan) Number printed on the receipt.",inputType:"Text / Alphanumeric",validation:"Must match the actual DC number in the system"},{qno:"Q2",question:"Enter the total number of physical boxes you just received.",inputType:"Numeric",validation:"Must match the dispatched box count"},{qno:"Q3",question:"Enter the seal number attached to the boxes.",inputType:"Text / Alphanumeric",validation:"Must match the seal number recorded at Hub"},{qno:"Q4",question:"Are there any physical damages to the boxes?",inputType:"Dropdown (Yes/No)",validation:"App flags for supervisor review if 'Yes'"}]},{process:"Stock Receiving",activity:"TO Checking (Transfer Order)",icon:"📦",bg:"#dbeafe",questions:[{qno:"Q1",question:"Enter the TO (Transfer Order) Number you are checking.",inputType:"Text / Alphanumeric",validation:"Must match pending TO in system"},{qno:"Q2",question:"Pick one item. Enter the 6-digit SKU code.",inputType:"Text / Alphanumeric",validation:"System verifies item is part of this TO"},{qno:"Q3",question:"Enter the exact Batch Number printed on this physical item.",inputType:"Text / Alphanumeric",validation:"Must match backend batch number"},{qno:"Q4",question:"Enter the Expiry Date (MM/YYYY) printed on this item.",inputType:"Date (MM/YYYY)",validation:"Must match backend expiry date"},{qno:"Q5",question:"Count the physical quantity of this item and enter here.",inputType:"Numeric",validation:"Must match dispatched quantity"}]},{process:"Stock Receiving",activity:"Complaints (Shortage/Damage)",icon:"📦",bg:"#dbeafe",questions:[{qno:"Q1",question:"Select the type of discrepancy.",inputType:"Dropdown (Shortage/Excess/Damage)",validation:"Determines next workflow steps"},{qno:"Q2",question:"Enter the SKU code of the item with the discrepancy.",inputType:"Text / Alphanumeric",validation:"Validates item exists in current invoice"},{qno:"Q3",question:"Enter the missing or damaged quantity.",inputType:"Numeric",validation:"Logs the exact variance amount"},{qno:"Q4",question:"Upload a photo of the damaged item.",inputType:"Photo Upload",validation:"Mandatory if 'Damage' selected"}]},{process:"Customer Handling (Billing)",activity:"Phone Number & Registration",icon:"🧾",bg:"#dcfce7",questions:[{qno:"Q1",question:"Enter the customer's 10-digit mobile number.",inputType:"Numeric",validation:"App checks if number exists in mock database"},{qno:"Q2",question:"Does this number exist in the system?",inputType:"Dropdown (Yes/No)",validation:"Validates trainee's observation of the screen"},{qno:"Q3",question:"If New: Enter the Customer's Name, Gender, and Age.",inputType:"Text",validation:"Checks data entry completeness"}]},{process:"Customer Handling (Billing)",activity:"Product Search & Prescriptions",icon:"🧾",bg:"#dcfce7",questions:[{qno:"Q1",question:"Enter the first 4 letters of the prescribed medicine.",inputType:"Text",validation:"Tests trainee's search strategy"},{qno:"Q2",question:"Select the correct composition/salt for this medicine.",inputType:"Dropdown (Composition)",validation:"Tests pharmacological knowledge"},{qno:"Q3",question:"Does this medicine fall under Schedule H / H1?",inputType:"Dropdown (Yes/No)",validation:"Critical compliance check"},{qno:"Q4",question:"If Yes: Enter the Doctor's Name and Registration Number.",inputType:"Text",validation:"Validates Schedule H protocol is followed"}]},{process:"Customer Handling (Billing)",activity:"Cross-Selling & Substitutes",icon:"🧾",bg:"#dcfce7",questions:[{qno:"Q1",question:"Select the MedPlus alternative for the prescribed brand.",inputType:"Dropdown (Substitute)",validation:"Verifies correct substitute mapping"},{qno:"Q2",question:"What is the price difference (savings) for the customer?",inputType:"Numeric",validation:"Tests ability to calculate savings"},{qno:"Q3",question:"Which cross-sell item did you recommend?",inputType:"Text",validation:"Tracks cross-selling behavior"}]},{process:"Customer Handling (Billing)",activity:"Payment Collection & Tendering",icon:"🧾",bg:"#dcfce7",questions:[{qno:"Q1",question:"Enter the Final Bill Amount.",inputType:"Numeric",validation:"Matches mock bill total"},{qno:"Q2",question:"Select Payment Mode used by the customer.",inputType:"Dropdown (Payment)",validation:"Tests payment mode selection"},{qno:"Q3",question:"If Cash: Customer handed Rs. 500. Enter exact change to return.",inputType:"Numeric",validation:"Tests cash handling math (500 - Bill Amount)"}]},{process:"Audit Process",activity:"Daily Short Audit / Box Mapping",icon:"🔍",bg:"#fef3c7",questions:[{qno:"Q1",question:"Walk to Rack #4. Enter the Rack Code you see.",inputType:"Text / Alphanumeric",validation:"Verifies trainee is physically at the correct rack"},{qno:"Q2",question:"Find item [Random SKU]. Enter exact physical count on shelf.",inputType:"Numeric",validation:"Must match backend live inventory count"},{qno:"Q3",question:"Does the physical count match the system quantity?",inputType:"Dropdown (Yes/No)",validation:"Tests ability to spot variances"},{qno:"Q4",question:"Check the closest expiry date for this item and enter it.",inputType:"Date (MM/YYYY)",validation:"Ensures trainee checks FEFO (First Expire First Out)"}]},{process:"Transferring Process",activity:"Near Expiry / Non-Moving Returns",icon:"🔄",bg:"#f3e8ff",questions:[{qno:"Q1",question:"Enter the SKU of the item you are pulling for return.",inputType:"Text / Alphanumeric",validation:"Validates item selection"},{qno:"Q2",question:"Select the Return Reason.",inputType:"Dropdown (Return)",validation:"Ensures correct return category is used"},{qno:"Q3",question:"Enter the exact expiry date of the product.",inputType:"Date (MM/YYYY)",validation:"Verifies if it qualifies for Near Expiry"},{qno:"Q4",question:"Enter the quantity you are transferring out.",inputType:"Numeric",validation:"Updates mock inventory transfer out"}]},{process:"Bank Deposits",activity:"Denomination & Bank Deposit",icon:"🏦",bg:"#ffe4e6",questions:[{qno:"Q1",question:"Enter the total cash collection amount for the shift.",inputType:"Numeric",validation:"Must match shift's cash sales total"},{qno:"Q2",question:"Enter denomination count: How many 500s, 200s, 100s, 50s?",inputType:"Denomination",validation:"Sum of denominations must equal total cash"},{qno:"Q3",question:"Does physical cash match the Day Sales Summary printout?",inputType:"Dropdown (Yes/No)",validation:"Verifies end-of-day reconciliation"},{qno:"Q4",question:"Enter the Deposit Slip Number or Bank Reference Number.",inputType:"Text / Alphanumeric",validation:"Tests documentation compliance"}]},{process:"Revenue Recovery",activity:"CFP / BBOC",icon:"💰",bg:"#fff7ed",questions:[{qno:"Q1",question:"Enter the pending Order ID you are reviewing.",inputType:"Text / Alphanumeric",validation:"Validates correct order is selected"},{qno:"Q2",question:"Which items are currently out of stock for this order?",inputType:"Text",validation:"Verifies trainee can identify pending items"},{qno:"Q3",question:"Select the action taken.",inputType:"Dropdown (Resolution)",validation:"Logs resolution method"},{qno:"Q4",question:"Enter expected fulfillment time communicated to customer.",inputType:"Text",validation:"Tests customer communication tracking"}]}];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────────────────────────
+let currentUser = null;
+let currentRole = null;
+let currentSecIdx = 0;
+let currentQIdx = 0;
+let selectedTraineeId = null;
+let selectedTraineeData = null;
+let localAnswers = {}; // { "si_qi": { value, submitted } }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTH
+// ─────────────────────────────────────────────────────────────────────────────
+auth.onAuthStateChanged(async user => {
+  if (user) {
+    currentUser = user;
+    const snap = await db.collection('users').doc(user.uid).get();
+    if (!snap.exists) { auth.signOut(); return; }
+    const data = snap.data();
+    currentRole = data.role;
+    showRoleScreen(data);
+  } else {
+    currentUser = null; currentRole = null;
+    showScreen('login');
+  }
+});
+
+async function doLogin() {
+  const email = v('loginEmail'), pass = v('loginPassword');
+  if (!email || !pass) { showAlert('loginAlert','Please enter email and password.','danger'); return; }
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+  } catch(e) {
+    showAlert('loginAlert', e.message, 'danger');
+  }
+}
+
+function doLogout() {
+  if (confirm('Are you sure you want to logout?')) auth.signOut();
+}
+
+function showRoleScreen(data) {
+  if (data.role === 'admin') {
+    document.getElementById('adminName').textContent = data.name || 'Admin';
+    showScreen('admin');
+    loadAdminData();
+  } else if (data.role === 'mentor') {
+    document.getElementById('mentorName').textContent = data.name || 'Mentor';
+    showScreen('mentor');
+    loadMentorData();
+  } else {
+    document.getElementById('traineeName').textContent = data.name || 'Trainee';
+    showScreen('trainee');
+    loadTraineeData(data);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADMIN FUNCTIONS
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadAdminData() {
+  const snap = await db.collection('users').get();
+  const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const trainees = users.filter(u => u.role === 'trainee');
+  const mentors  = users.filter(u => u.role === 'mentor');
+
+  document.getElementById('aStatTrainees').textContent = trainees.length;
+  document.getElementById('aStatMentors').textContent  = mentors.length;
+
+  // Count completed (all 42 answered)
+  let doneCount = 0;
+  for (const t of trainees) {
+    const ans = await db.collection('answers').doc(t.id).get();
+    if (ans.exists) {
+      const d = ans.data();
+      const answered = Object.keys(d).filter(k => d[k]?.submitted).length;
+      if (answered >= 42) doneCount++;
+    }
+  }
+  document.getElementById('aStatDone').textContent = doneCount;
+
+  // Mentor dropdown
+  const select = document.getElementById('assignMentor');
+  select.innerHTML = '<option value="">— Select Mentor —</option>';
+  mentors.forEach(m => {
+    select.innerHTML += `<option value="${m.id}">${m.name}</option>`;
+  });
+
+  // Users list
+  const el = document.getElementById('usersList');
+  if (!users.length) { el.innerHTML = '<div class="empty"><div class="ei">👥</div><p>No users yet</p></div>'; return; }
+  el.innerHTML = users.map(u => `
+    <div class="trainee-item">
+      <div class="t-avatar" style="background:${roleColor(u.role)}">${(u.name||'?')[0].toUpperCase()}</div>
+      <div class="t-info">
+        <div class="t-name">${u.name || 'Unknown'}</div>
+        <div class="t-meta">${u.email} &nbsp;·&nbsp; <span class="role-pill role-${u.role}">${u.role}</span></div>
+        <div class="t-meta">${u.store || ''}</div>
+      </div>
+      <button class="btn btn-sm btn-danger" style="padding:5px 10px" onclick="deleteUser('${u.id}','${u.email}')">✕</button>
+    </div>`).join('');
+
+  // Admin progress list
+  const pl = document.getElementById('adminProgressList');
+  if (!trainees.length) { pl.innerHTML = '<div class="empty"><div class="ei">📊</div><p>No trainees yet</p></div>'; return; }
+  let rows = '';
+  for (const t of trainees) {
+    const ans = await db.collection('answers').doc(t.id).get();
+    let answered = 0;
+    if (ans.exists) {
+      const d = ans.data();
+      answered = Object.keys(d).filter(k => d[k]?.submitted).length;
+    }
+    const pct = Math.round(answered/42*100);
+    const eval_ = await db.collection('evaluations').doc(t.id).get();
+    const score = eval_.exists ? eval_.data().score : null;
+    rows += `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <span style="font-size:14px;font-weight:700">${t.name}</span>
+        ${score !== null ? `<span class="tag tag-done">Score: ${score}/100</span>` : `<span class="tag tag-pending">Not scored</span>`}
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:5px">${t.email} · ${t.store||''}</div>
+      <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px">${answered}/42 questions answered (${pct}%)</div>
+    </div>`;
+  }
+  pl.innerHTML = rows;
+}
+
+function toggleMentorAssign() {
+  const role = v('newRole');
+  document.getElementById('mentorAssignWrap').style.display = role==='trainee' ? 'block' : 'none';
+}
+
+async function createUser() {
+  const name  = v('newName'), email = v('newEmail'),
+        pass  = v('newPassword'), role = v('newRole'),
+        store = v('newStore'), mentorId = v('assignMentor');
+
+  if (!name||!email||!pass) { showAlert('createAlert','Please fill all required fields.','danger'); return; }
+  if (pass.length < 6)      { showAlert('createAlert','Password must be at least 6 characters.','danger'); return; }
+
+  try {
+    // Create a secondary app instance to avoid logging out admin
+    const secondary = firebase.initializeApp(firebase.app().options, 'secondary');
+    const secAuth = secondary.auth();
+    const cred = await secAuth.createUserWithEmailAndPassword(email, pass);
+    const uid = cred.user.uid;
+    await secAuth.signOut();
+    await secondary.delete();
+
+    await db.collection('users').doc(uid).set({
+      name, email, role, store,
+      mentorId: role==='trainee' ? (mentorId||null) : null,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    showAlert('createAlert',`✅ ${name} (${role}) created successfully!`,'success');
+    ['newName','newEmail','newPassword','newStore'].forEach(id => document.getElementById(id).value='');
+    loadAdminData();
+  } catch(e) {
+    showAlert('createAlert', e.message, 'danger');
+  }
+}
+
+async function deleteUser(uid, email) {
+  if (!confirm(`Delete user ${email}? This removes their profile but NOT their Firebase Auth account.`)) return;
+  await db.collection('users').doc(uid).delete();
+  showToast('User deleted');
+  loadAdminData();
+}
+
+function switchAdminTab(tab) {
+  ['users','progress'].forEach(t => {
+    document.getElementById(`adminTab-${t}`).style.display = t===tab?'block':'none';
+    document.getElementById(`anav-${t}`).className = 'nav-item'+(t===tab?' active':'');
+  });
+  if (tab==='progress') loadAdminData();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MENTOR FUNCTIONS
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadMentorData() {
+  const snap = await db.collection('users').where('mentorId','==',currentUser.uid).get();
+  const trainees = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  let scored = 0, pending = 0;
+  const evalSnaps = await Promise.all(trainees.map(t => db.collection('evaluations').doc(t.id).get()));
+  evalSnaps.forEach(e => e.exists ? scored++ : pending++);
+
+  document.getElementById('mStatTrainees').textContent = trainees.length;
+  document.getElementById('mStatScored').textContent   = scored;
+  document.getElementById('mStatPending').textContent  = pending;
+
+  const el = document.getElementById('mentorTraineeList');
+  if (!trainees.length) {
+    el.innerHTML = '<div class="empty"><div class="ei">👥</div><p>No trainees assigned yet</p></div>'; return;
+  }
+  el.innerHTML = trainees.map((t, i) => {
+    const ev = evalSnaps[i];
+    const scored = ev.exists;
+    return `<div class="trainee-item" onclick="openTraineeDetail('${t.id}')">
+      <div class="t-avatar" style="background:${avatarColors[i%avatarColors.length]}">${(t.name||'?')[0].toUpperCase()}</div>
+      <div class="t-info">
+        <div class="t-name">${t.name}</div>
+        <div class="t-meta">${t.store||''} ${scored ? '&nbsp;·&nbsp;<span class="tag tag-done">Scored: '+ev.data().score+'/100</span>' : '&nbsp;·&nbsp;<span class="tag tag-pending">Not scored yet</span>'}</div>
+      </div>
+      <div class="t-chevron">›</div>
+    </div>`;
+  }).join('');
+}
+
+async function openTraineeDetail(tid) {
+  selectedTraineeId = tid;
+  const tSnap = await db.collection('users').doc(tid).get();
+  selectedTraineeData = { id: tid, ...tSnap.data() };
+
+  const ansSnap = await db.collection('answers').doc(tid).get();
+  const answers = ansSnap.exists ? ansSnap.data() : {};
+  const answered = Object.keys(answers).filter(k => answers[k]?.submitted).length;
+  const pct = Math.round(answered/42*100);
+
+  // Header
+  document.getElementById('mentorDetailHeader').innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="t-avatar" style="background:var(--blue);font-size:18px">
+        ${(selectedTraineeData.name||'?')[0].toUpperCase()}
+      </div>
+      <div>
+        <div style="font-size:16px;font-weight:800">${selectedTraineeData.name}</div>
+        <div style="font-size:12px;color:var(--muted)">${selectedTraineeData.email} · ${selectedTraineeData.store||''}</div>
+        <div style="margin-top:6px"><div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">${answered}/42 answers (${pct}%)</div></div>
+      </div>
+    </div>`;
+
+  // Activity breakdown
+  const actEl = document.getElementById('mentorDetailActivities');
+  let html = '';
+  SECTIONS.forEach((sec, si) => {
+    const secAnswered = sec.questions.filter((_,qi) => answers[`${si}_${qi}`]?.submitted).length;
+    const secPct = Math.round(secAnswered/sec.questions.length*100);
+    html += `<div class="card" style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span style="font-size:20px">${sec.icon}</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700">${sec.activity}</div>
+          <div style="font-size:11px;color:var(--muted)">${sec.process}</div>
+        </div>
+        <span class="tag ${secAnswered===sec.questions.length?'tag-done':secAnswered>0?'tag-pending':'tag-new'}">${secAnswered}/${sec.questions.length}</span>
+      </div>
+      <div class="prog-bar"><div class="prog-fill" style="width:${secPct}%"></div></div>
+      ${secAnswered > 0 ? `<details style="margin-top:8px">
+        <summary style="font-size:12px;color:var(--blue);cursor:pointer;font-weight:700">View Answers</summary>
+        <div style="margin-top:8px">
+          ${sec.questions.map((q,qi) => {
+            const a = answers[`${si}_${qi}`];
+            return `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
+              <div style="font-weight:600;color:var(--muted)">${q.qno}: ${q.question}</div>
+              <div style="margin-top:3px;color:var(--text)">${a?.submitted ? '✅ ' + (a.value||'(submitted)') : '⏳ Not answered'}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </details>` : ''}
+    </div>`;
+  });
+  actEl.innerHTML = html;
+
+  // Load existing evaluation
+  const evalSnap = await db.collection('evaluations').doc(tid).get();
+  if (evalSnap.exists) {
+    const ev = evalSnap.data();
+    document.getElementById('evalSlider').value = ev.score;
+    document.getElementById('evalScoreVal').textContent = ev.score;
+    document.getElementById('evalComment').value = ev.comment || '';
+    showAlert('evalAlert', `✅ Already evaluated with score ${ev.score}/100. You can update below.`, 'info');
+  }
+
+  document.getElementById('mnav-detail').style.display = 'flex';
+  switchMentorTab('detail');
+}
+
+async function submitEvaluation() {
+  const score   = parseInt(document.getElementById('evalSlider').value);
+  const comment = document.getElementById('evalComment').value.trim();
+  if (!selectedTraineeId) return;
+
+  await db.collection('evaluations').doc(selectedTraineeId).set({
+    score, comment,
+    mentorId:   currentUser.uid,
+    mentorName: (await db.collection('users').doc(currentUser.uid).get()).data()?.name || 'Mentor',
+    evaluatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  showAlert('evalAlert', `✅ Score of ${score}/100 submitted for ${selectedTraineeData?.name}!`, 'success');
+  showToast(`✅ Score submitted!`);
+}
+
+function switchMentorTab(tab) {
+  ['trainees','detail'].forEach(t => {
+    document.getElementById(`mentorTab-${t}`).style.display = t===tab?'block':'none';
+    document.getElementById(`mnav-${t}`).className = 'nav-item'+(t===tab?' active':'');
+  });
+  if (tab==='trainees') loadMentorData();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TRAINEE FUNCTIONS
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadTraineeData(userData) {
+  // Load answers from Firestore
+  const snap = await db.collection('answers').doc(currentUser.uid).get();
+  localAnswers = snap.exists ? snap.data() : {};
+
+  buildTraineeHome();
+
+  // Load mentor evaluation
+  const evalSnap = await db.collection('evaluations').doc(currentUser.uid).get();
+  const banner = document.getElementById('mentorScoreBanner');
+  if (evalSnap.exists) {
+    const ev = evalSnap.data();
+    banner.style.display = 'block';
+    banner.innerHTML = `
+      <div class="score-card" style="margin-bottom:12px">
+        <div style="font-size:12px;opacity:.8;margin-bottom:4px">🏆 MENTOR EVALUATION SCORE</div>
+        <div class="score-big">${ev.score}</div>
+        <div class="score-sub">out of 100 &nbsp;·&nbsp; by ${ev.mentorName||'Mentor'}</div>
+        ${ev.comment ? `<div class="score-comment">💬 "${ev.comment}"</div>` : ''}
+      </div>`;
+  }
+}
+
+function buildTraineeHome() {
+  const totalQ = SECTIONS.reduce((s,x)=>s+x.questions.length,0);
+  const answered = Object.keys(localAnswers).filter(k=>localAnswers[k]?.submitted).length;
+  const pct = Math.round(answered/totalQ*100);
+
+  document.getElementById('tStatDone').textContent  = answered;
+  document.getElementById('tStatTotal').textContent = totalQ;
+  document.getElementById('tStatPct').textContent   = pct+'%';
+  document.getElementById('tOverallBar').style.width = pct+'%';
+
+  const el = document.getElementById('traineeActivityList');
+  el.innerHTML = SECTIONS.map((sec, si) => {
+    const done = sec.questions.filter((_,qi) => localAnswers[`${si}_${qi}`]?.submitted).length;
+    const tot  = sec.questions.length;
+    const isDone = done===tot, isPartial = done>0&&!isDone;
+    const dpct = Math.round(done/tot*100);
+    return `<div class="act-card ${isDone?'done':isPartial?'partial':''}" onclick="startActivity(${si})">
+      <div class="act-icon" style="background:${sec.bg}">${sec.icon}</div>
+      <div class="act-info">
+        <div class="act-name">${sec.activity}
+          <span class="tag ${isDone?'tag-done':isPartial?'tag-pending':'tag-new'}" style="margin-left:6px">
+            ${isDone?'✓ Done':isPartial?'In Progress':'Start'}
+          </span>
+        </div>
+        <div class="act-meta">${sec.process} &nbsp;·&nbsp; ${tot} questions</div>
+        <div class="prog-bar" style="margin-top:5px"><div class="prog-fill" style="width:${dpct}%"></div></div>
+      </div>
+      <div class="t-chevron">›</div>
+    </div>`;
+  }).join('');
+}
+
+function startActivity(si) {
+  currentSecIdx = si;
+  currentQIdx = 0;
+  // Find first unanswered
+  const sec = SECTIONS[si];
+  for (let i=0;i<sec.questions.length;i++) {
+    if (!localAnswers[`${si}_${i}`]?.submitted) { currentQIdx=i; break; }
+  }
+  switchTraineeTab('quiz');
+  renderQuiz();
+}
+
+function renderQuiz() {
+  const sec = SECTIONS[currentSecIdx];
+  const si  = currentSecIdx, qi = currentQIdx;
+  const q   = sec.questions[qi];
+  const ans = localAnswers[`${si}_${qi}`];
+
+  // Header
+  document.getElementById('quizHeader').innerHTML = `
+    <div class="proc-tag">${sec.process}</div>
+    <div style="font-size:15px;font-weight:800;margin-bottom:3px">${sec.activity}</div>
+    <div style="font-size:12px;color:var(--muted)">Question ${qi+1} of ${sec.questions.length}</div>
+    <div class="step-dots" style="margin-top:8px">
+      ${sec.questions.map((_,i)=>`<div class="dot ${localAnswers[si+'_'+i]?.submitted?'done':i===qi?'active':''}"></div>`).join('')}
+    </div>`;
+
+  // Question
+  const inputHtml = buildQuizInput(q, si, qi, ans);
+  document.getElementById('quizArea').innerHTML = `
+    <div class="q-card">
+      <div class="q-num">${q.qno}</div>
+      <div class="q-text">${q.question}</div>
+      <div class="input-tag">⌨️ ${q.inputType}</div>
+      ${inputHtml}
+      <div class="hint-box">💡 ${q.validation}</div>
+      <div class="feedback ${ans?.submitted?'info show':''}" id="qFeedback">
+        ${ans?.submitted ? '✅ Answer recorded! Move to next question.' : ''}
+      </div>
+    </div>`;
+
+  const isLast = qi===sec.questions.length-1;
+  const btn = document.getElementById('btnSubmit');
+  const skip = document.getElementById('btnSkip');
+  if (ans?.submitted) {
+    btn.textContent = isLast ? 'Finish ✓' : 'Next →';
+    btn.className = 'btn btn-success';
+    skip.style.display = 'none';
+  } else {
+    btn.textContent = 'Submit →';
+    btn.className = 'btn btn-primary';
+    skip.style.display = 'block';
+  }
+}
+
+function buildQuizInput(q, si, qi, ans) {
+  const key = `${si}_${qi}`;
+  const val = ans?.value || '';
+  const dis = ans?.submitted ? 'disabled' : '';
+  const t   = q.inputType.toLowerCase();
+
+  if (t.includes('dropdown (yes/no)')) return `<select class="q-input ${val?'filled':''}" id="qi_${key}" ${dis}>
+    <option value="">— Select —</option>
+    <option value="Yes" ${val==='Yes'?'selected':''}>Yes</option>
+    <option value="No"  ${val==='No'?'selected':''}>No</option>
+  </select>`;
+
+  if (t.includes('dropdown (shortage') || t.includes('discrepancy')) return `<select class="q-input ${val?'filled':''}" id="qi_${key}" ${dis}>
+    <option value="">— Select —</option>
+    <option value="Shortage" ${val==='Shortage'?'selected':''}>Shortage</option>
+    <option value="Excess" ${val==='Excess'?'selected':''}>Excess</option>
+    <option value="Damage" ${val==='Damage'?'selected':''}>Damage</option>
+  </select>`;
+
+  if (t.includes('dropdown (payment)')) return `<select class="q-input ${val?'filled':''}" id="qi_${key}" ${dis}>
+    <option value="">— Select —</option>
+    <option value="Cash" ${val==='Cash'?'selected':''}>Cash</option>
+    <option value="Card" ${val==='Card'?'selected':''}>Credit/Debit Card</option>
+    <option value="UPI"  ${val==='UPI'?'selected':''}>UPI / PhonePe / GPay</option>
+    <option value="Wallet" ${val==='Wallet'?'selected':''}>Wallet</option>
+  </select>`;
+
+  if (t.includes('dropdown (composition)')) return `<select class="q-input ${val?'filled':''}" id="qi_${key}" ${dis}>
+    <option value="">— Select composition —</option>
+    ${['Paracetamol 500mg','Amoxicillin 250mg','Metformin 500mg','Atorvastatin 10mg','Azithromycin 250mg'].map(o=>`<option value="${o}" ${val===o?'selected':''}>${o}</option>`).join('')}
+  </select>`;
+
+  if (t.includes('dropdown (substitute)')) return `<select class="q-input ${val?'filled':''}" id="qi_${key}" ${dis}>
+    <option value="">— Select substitute —</option>
+    ${['MedPlus Generic A','MedPlus Generic B','MedPlus Generic C'].map(o=>`<option value="${o}" ${val===o?'selected':''}>${o}</option>`).join('')}
+  </select>`;
+
+  if (t.includes('dropdown (resolution)')) return `<select class="q-input ${val?'filled':''}" id="qi_${key}" ${dis}>
+    <option value="">— Select action —</option>
+    ${['Sourced from Another Store','Substitute Offered','Cancelled by Customer'].map(o=>`<option value="${o}" ${val===o?'selected':''}>${o}</option>`).join('')}
+  </select>`;
+
+  if (t.includes('dropdown (return)')) return `<select class="q-input ${val?'filled':''}" id="qi_${key}" ${dis}>
+    <option value="">— Select reason —</option>
+    ${['Near Expiry','Non-Moving / Slow Moving','Damaged','Wrong Product Received'].map(o=>`<option value="${o}" ${val===o?'selected':''}>${o}</option>`).join('')}
+  </select>`;
+
+  if (t.includes('photo upload')) return `
+    <div class="photo-upload ${val?'uploaded':''}" id="photoBox_${key}" onclick="simulatePhoto('${key}')">
+      <div style="font-size:28px;margin-bottom:6px">${val?'✅':'📷'}</div>
+      <div style="font-size:13px;color:var(--muted)">${val?'Photo uploaded':'Tap to upload photo'}</div>
+    </div>`;
+
+  if (t.includes('denomination')) return `
+    <div class="denom-grid">
+      ${['₹500','₹200','₹100','₹50','₹20','₹10','Coins'].map(d=>`
+        <div><div class="denom-lbl">${d}</div>
+          <input type="number" class="q-input" placeholder="Count" min="0"
+            id="denom_${key}_${d.replace('₹','D')}" ${dis} style="margin-bottom:0"></div>`).join('')}
+    </div>`;
+
+  if (t.includes('date')) return `<input type="month" class="q-input ${val?'filled':''}" id="qi_${key}" value="${val}" ${dis}>`;
+  if (t.includes('numeric') || t==='numeric') return `<input type="number" class="q-input ${val?'filled':''}" id="qi_${key}" value="${val}" ${dis} placeholder="Enter number...">`;
+  return `<input class="q-input ${val?'filled':''}" id="qi_${key}" value="${val}" ${dis} placeholder="Type your answer...">`;
+}
+
+function simulatePhoto(key) {
+  const box = document.getElementById('photoBox_'+key);
+  if (box) {
+    box.className = 'photo-upload uploaded';
+    box.innerHTML = '<div style="font-size:28px;margin-bottom:6px">✅</div><div style="font-size:13px;color:var(--muted)">Photo uploaded</div>';
+    // Store temp value
+    if (!localAnswers[key]) localAnswers[key]={};
+    localAnswers[key]._photoUploaded = true;
+  }
+  showToast('📷 Photo uploaded!');
+}
+
+async function submitQ() {
+  const si = currentSecIdx, qi = currentQIdx;
+  const key = `${si}_${qi}`;
+  const q   = SECTIONS[si].questions[qi];
+  const ans = localAnswers[key];
+
+  if (ans?.submitted) { goNextQ(); return; }
+
+  const t = q.inputType.toLowerCase();
+  let value = '';
+
+  if (t.includes('denomination')) {
+    const denoms = ['₹500','₹200','₹100','₹50','₹20','₹10','Coins'];
+    const parts = denoms.map(d => {
+      const inp = document.getElementById(`denom_${key}_${d.replace('₹','D')}`);
+      return `${d}: ${inp?.value||'0'}`;
+    });
+    value = parts.join(', ');
+  } else if (t.includes('photo upload')) {
+    value = localAnswers[key]?._photoUploaded ? 'Photo uploaded' : '';
+  } else {
+    const inp = document.getElementById('qi_'+key);
+    value = inp ? inp.value.trim() : '';
+  }
+
+  if (!value) { showToast('⚠️ Please enter an answer first'); return; }
+
+  localAnswers[key] = { value, submitted: true, answeredAt: new Date().toISOString() };
+
+  // Save to Firestore
+  await db.collection('answers').doc(currentUser.uid).set(localAnswers, { merge: true });
+
+  // Show feedback
+  const fb = document.getElementById('qFeedback');
+  fb.className = 'feedback info show';
+  fb.innerHTML = `✅ Saved! Validation: ${q.validation}`;
+
+  // Disable input
+  document.querySelectorAll('#quizArea input, #quizArea select').forEach(el => el.disabled=true);
+  document.getElementById('btnSkip').style.display = 'none';
+  const isLast = qi===SECTIONS[si].questions.length-1;
+  const btn = document.getElementById('btnSubmit');
+  btn.className = 'btn btn-success';
+  btn.textContent = isLast ? 'Finish ✓' : 'Next →';
+
+  buildTraineeHome();
+  updateQuizDots();
+}
+
+async function skipQ() {
+  const si=currentSecIdx, qi=currentQIdx, key=`${si}_${qi}`;
+  localAnswers[key] = { value:'', submitted:true, skipped:true, answeredAt: new Date().toISOString() };
+  await db.collection('answers').doc(currentUser.uid).set(localAnswers,{merge:true});
+  buildTraineeHome();
+  goNextQ();
+}
+
+function goNextQ() {
+  const sec = SECTIONS[currentSecIdx];
+  if (currentQIdx < sec.questions.length-1) { currentQIdx++; renderQuiz(); }
+  else { switchTraineeTab('home'); showToast('✅ Activity complete!'); }
+}
+
+function updateQuizDots() {
+  const si=currentSecIdx;
+  const sec=SECTIONS[si];
+  const header=document.getElementById('quizHeader');
+  if(!header) return;
+  const dots=header.querySelector('.step-dots');
+  if(!dots) return;
+  dots.innerHTML=sec.questions.map((_,i)=>`<div class="dot ${localAnswers[si+'_'+i]?.submitted?'done':i===currentQIdx?'active':''}"></div>`).join('');
+}
+
+async function loadMyScore() {
+  const evalSnap = await db.collection('evaluations').doc(currentUser.uid).get();
+  const el = document.getElementById('myScoreContent');
+  if (!evalSnap.exists) {
+    el.innerHTML = `
+      <div class="card" style="text-align:center;padding:30px">
+        <div style="font-size:40px;margin-bottom:10px">⏳</div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:6px">Not Evaluated Yet</div>
+        <div style="font-size:13px;color:var(--muted)">Your mentor will review your answers and give a final score here.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">My Progress</div>
+        ${SECTIONS.map((sec,si)=>{
+          const done=sec.questions.filter((_,qi)=>localAnswers[si+'_'+qi]?.submitted).length;
+          const pct=Math.round(done/sec.questions.length*100);
+          return `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+              <span>${sec.icon} ${sec.activity}</span>
+              <span style="font-weight:700">${done}/${sec.questions.length}</span>
+            </div>
+            <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    return;
+  }
+
+  const ev = evalSnap.data();
+  const totalQ = SECTIONS.reduce((s,x)=>s+x.questions.length,0);
+  const answered = Object.keys(localAnswers).filter(k=>localAnswers[k]?.submitted).length;
+  const pct = Math.round(answered/totalQ*100);
+
+  el.innerHTML = `
+    <div class="score-card">
+      <div style="font-size:12px;opacity:.8;margin-bottom:4px">🏆 FINAL EVALUATION SCORE</div>
+      <div class="score-big">${ev.score}</div>
+      <div class="score-sub">out of 100 &nbsp;·&nbsp; by ${ev.mentorName||'Mentor'}</div>
+      ${ev.comment ? `<div class="score-comment">💬 "${ev.comment}"</div>` : ''}
+    </div>
+    <div class="card">
+      <div class="card-title">My Completion</div>
+      <div style="text-align:center;margin-bottom:10px">
+        <div style="font-size:32px;font-weight:900;color:var(--blue)">${pct}%</div>
+        <div style="font-size:13px;color:var(--muted)">${answered} of ${totalQ} questions answered</div>
+      </div>
+      <div class="prog-bar" style="height:8px"><div class="prog-fill" style="width:${pct}%"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Activity Breakdown</div>
+      ${SECTIONS.map((sec,si)=>{
+        const done=sec.questions.filter((_,qi)=>localAnswers[si+'_'+qi]?.submitted).length;
+        const p=Math.round(done/sec.questions.length*100);
+        return `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+            <span>${sec.icon} ${sec.activity}</span>
+            <span class="tag ${done===sec.questions.length?'tag-done':'tag-pending'}">${done}/${sec.questions.length}</span>
+          </div>
+          <div class="prog-bar"><div class="prog-fill" style="width:${p}%"></div></div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function switchTraineeTab(tab) {
+  ['home','quiz','score'].forEach(t => {
+    document.getElementById(`traineeTab-${t}`).style.display = t===tab?'block':'none';
+  });
+  ['home','score'].forEach(t => {
+    const nav = document.getElementById(`tnav-${t}`);
+    if(nav) nav.className = 'nav-item'+(t===tab?' active':'');
+  });
+  if (tab==='score') loadMyScore();
+  if (tab==='home') buildTraineeHome();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+const avatarColors = ['#004080','#0b6e2e','#e65c00','#7c3aed','#be123c','#0369a1'];
+
+function roleColor(role) {
+  return role==='admin'?'#1d4ed8':role==='mentor'?'#065f46':'#92400e';
+}
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name)?.classList.add('active');
+}
+
+function showAlert(id, msg, type='info') {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+}
+
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+function v(id) { return document.getElementById(id)?.value?.trim()||''; }
+</script>
+</body>
+</html>
